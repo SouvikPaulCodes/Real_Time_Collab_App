@@ -1,0 +1,157 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: all;
+}
+@plugin "@tailwindcss/typography";
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap {
+
+  ul[data-type='taskList'] {
+    list-style: none;
+    margin-left: 0;
+    padding: 0;
+
+    li {
+      align-items: center;
+      display: flex;
+
+      > label {
+        flex: 0 0 auto;
+        margin-right: 0.5rem;
+        user-select: none;
+      }
+
+      > div {
+        flex: 1 1 auto;
+
+        > p {
+          margin: 0;
+        }
+      }
+    }
+
+    input[type='checkbox'] {
+      cursor: pointer;
+    }
+
+    ul[data-type='taskList'] {
+      margin: 0;
+    }
+  }
+
+  .selection {
+    background-color: #adb5bd;
+  }
+}
+
+@keyframes animate {
+    0%{
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+        border-radius: 0;
+    }
+    100%{
+        transform: translateY(-1000px) rotate(720deg);
+        opacity: 0;
+        border-radius: 50%;
+    }
+}
+
+.background {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.background li {
+    position: absolute;
+    display: block;
+    list-style: none;
+    width: 20px;
+    height: 20px;
+    animation: animate 19s linear infinite;
+}
+
+.background li:nth-child(1) {
+    left: 55%;
+    width: 137px;
+    height: 137px;
+    bottom: -137px;
+    animation-delay: 1s;
+}
+.background li:nth-child(2) {
+    left: 43%;
+    width: 170px;
+    height: 170px;
+    bottom: -170px;
+    animation-delay: 2s;
+}
+.background li:nth-child(3) {
+    left: 4%;
+    width: 140px;
+    height: 140px;
+    bottom: -140px;
+    animation-delay: 2s;
+}
+.background li:nth-child(4) {
+    left: 79%;
+    width: 129px;
+    height: 129px;
+    bottom: -129px;
+    animation-delay: 11s;
+}
+.background li:nth-child(5) {
+    left: 0%;
+    width: 101px;
+    height: 101px;
+    bottom: -101px;
+    animation-delay: 16s;
+}
+.background li:nth-child(6) {
+    left: 51%;
+    width: 162px;
+    height: 162px;
+    bottom: -162px;
+    animation-delay: 23s;
+}
+.background li:nth-child(7) {
+    left: 61%;
+    width: 134px;
+    height: 134px;
+    bottom: -134px;
+    animation-delay: 11s;
+}
+.background li:nth-child(8) {
+    left: 9%;
+    width: 183px;
+    height: 183px;
+    bottom: -183px;
+    animation-delay: 28s;
+}
+.background li:nth-child(9) {
+    left: 80%;
+    width: 125px;
+    height: 125px;
+    bottom: -125px;
+    animation-delay: 27s;
+}
+.background li:nth-child(10) {
+    left: 84%;
+    width: 123px;
+    height: 123px;
+    bottom: -123px;
+    animation-delay: 10s;
+}
