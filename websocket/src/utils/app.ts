@@ -12,6 +12,10 @@ app.use(cors({
 }))
 app.use(express.json());
 
+app.get('/', (req, res) => {
+    res.send('WeWork Backend is online')
+})
+
 app.use('/api/workspaces', workRouter)
 app.use('/api/messages', msgRouter)
 

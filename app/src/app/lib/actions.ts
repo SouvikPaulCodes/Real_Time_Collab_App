@@ -71,7 +71,6 @@ export async function creatorProjects(projects: Project[] | undefined) {
 }
 
 export async function checkAuth(id: string, userId: string, orgId: string | undefined) {
-    console.log('Checking for authorization')
     try {
         const data = await getProjects({orgId, userId});
 
@@ -91,11 +90,8 @@ export async function checkAuth(id: string, userId: string, orgId: string | unde
 }
 
 export async function updateTitle(prevState: boolean | undefined, formData: FormData) {
-    console.log('Updating title');
     const id = formData.get('id');
     const title = formData.get('title');
-
-    console.log(id, title);
 
     const {userId, orgId} = await auth() as {
         userId: string,
@@ -118,8 +114,8 @@ export async function updateTitle(prevState: boolean | undefined, formData: Form
 
         return true;
     }
-    catch {
-        console.log('Couldnt change')
+    catch (e) {
+        console.error('Failed to update title', e);
         return false;
     }
 }
@@ -139,6 +135,6 @@ export async function getMessages(id: string, userId: string, orgId: string | un
         return messages;
     }
     catch(e: any) {
-        console.log(e)
+        console.error('Failed to fetch messages', e);
     }
 }

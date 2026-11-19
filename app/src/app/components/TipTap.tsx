@@ -17,52 +17,26 @@ import { CharacterCount } from "@tiptap/extensions"
 import {TextStyle, Color, BackgroundColor, FontFamily, FontSize, LineHeight} from '@tiptap/extension-text-style'
 import {IndexeddbPersistence} from 'y-indexeddb'
 import FileHandler from '@tiptap/extension-file-handler'
-import {FloatingMenu as FM} from '@tiptap/extension-floating-menu'
-import {FloatingMenu} from '@tiptap/react/menus'
 import InvisibleCharacters from '@tiptap/extension-invisible-characters'
 import Typography from '@tiptap/extension-typography'
 import TextAlign from '@tiptap/extension-text-align'
 import HorizontalRule from '@tiptap/extension-horizontal-rule'
 import {getHierarchicalIndexes, TableOfContentData, TableOfContents} from '@tiptap/extension-table-of-contents'
 import MenuBar from "./menuBar"
-import { useActionState, useEffect, useMemo, useState } from "react";
-import { ListBulletIcon, NumberedListIcon, PhotoIcon, TableCellsIcon } from "@heroicons/react/20/solid";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Blockquote from "@tiptap/extension-blockquote";
-import { updateTitle } from "../lib/actions";
+import Link from "next/link";
+import { ChevronLeft, ListTree, MessageCircle } from "lucide-react";
 import ToC from "./ToC";
 import Messaging from "./messaging";
+import InsertMenu from "./insertMenu";
+import DocTitle from "./docTitle";
+import Presence from "./presence";
+import ConnectionStatus from "./connectionStatus";
 import { Message } from "../lib/definitions";
+import { colorFor } from "../lib/collaborators";
 
-export default function Tiptap({fullname, token, docName, name, messages, userId} : {fullname: string, token: string, docName: string, name: string | undefined, messages: Message[] | undefined, userId: string}) { 
-    function getRandomColor() {
-        return Math.floor(Math.random()*255);
-    } 
-
-    const MyFontSize = FontSize.extend({
-        addGlobalAttributes() {
-            return [
-                {
-                    types: this.options.types,
-                    attributes: {
-                    fontSize: {
-                        default: '16px',
-                        parseHTML: element => element.style.fontSize,
-                        renderHTML: attributes => {
-                        if (!attributes.fontSize) {
-                            return {}
-                        }
-
-                        return {
-                            style: `font-size: ${attributes.fontSize}`,
-                        }
-                        },
-                    },
-                    },
-                },
-            ]
-        },
-    })
-
+export default function Tiptap({fullname, token, docName, name, messages, userId} : {fullname: string, token: string, docName: string, name: string | undefined, messages: Message[] | undefined, userId: string}) {
     const ydoc = useMemo(() => new Y.Doc(), []);
 
     const provider = useMemo(() => {
@@ -70,28 +44,42 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
             url: process.env.NEXT_PUBLIC_HOCUSPOCUS_URL!,
             name: docName,
             document: ydoc,
-            onConnect() {
-                console.log("Client is connected to server");
-            },
-            onDisconnect() {
-                console.log('Client is disconnected from server');
-            },
             token
         })
     },[docName, ydoc, token])
 
+    // Keeps a local copy so edits survive going offline.
     useEffect(() => {
-        const indexeddb = new IndexeddbPersistence(docName, ydoc)
-
-        indexeddb.on('synced', () => {
-            console.log('Content from databse is synced!');
-        })
+        new IndexeddbPersistence(docName, ydoc)
     },[ydoc])
 
-    const [title, setTitle] = useState(name);
-    const [temp, setTemp] = useState(name)
-
     const [anchors, setAnchors] = useState<TableOfContentData | never>([]);
+
+    // On narrower screens the outline and chat open as drawers.
+    const [panel, setPanel] = useState<'toc' | 'chat' | null>(null);
+    const [unread, setUnread] = useState(0);
+    const panelRef = useRef(panel);
+    panelRef.current = panel;
+    const tocRef = useRef<HTMLElement>(null);
+    const chatRef = useRef<HTMLElement>(null);
+
+    // Move focus into an opened drawer and give it back to the opener on close.
+    useEffect(() => {
+        if(!panel) return;
+
+        const opener = document.activeElement as HTMLElement | null;
+        (panel === 'toc' ? tocRef : chatRef).current?.focus();
+
+        function onKeyDown(e: KeyboardEvent) {
+            if(e.key === 'Escape') setPanel(null);
+        }
+
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('keydown', onKeyDown);
+            opener?.focus();
+        }
+    }, [panel])
 
     const editor = useEditor({
         extensions: [
@@ -99,14 +87,11 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
             undoRedo: false,
             codeBlock: {
                 enableTabIndentation: true,
-                HTMLAttributes: {
-                    class: 'mockup-code'
-                }
             },
             heading: {
                 levels: [1,2,3]
             }
-            }), 
+            }),
             Image.configure({
                 resize: {
                     enabled: true,
@@ -122,9 +107,6 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
                     resizable: true,
                     renderWrapper: true,
                     allowTableNodeSelection: true,
-                    HTMLAttributes: {
-                        class: 'table rounded-box border border-black'
-                    }
                 }
             }),
             TaskList,
@@ -140,6 +122,7 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
             HorizontalRule,
             Dropcursor.configure({
                 width: 2,
+                color: 'var(--color-accent)',
             }),
             FileHandler.configure({
                 allowedMimeTypes: ['image/jpg', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'],
@@ -161,7 +144,6 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
                 onPaste(editor, files, pasteContent) {
                     files.forEach(file => {
                         if(pasteContent) {
-                            console.log(pasteContent)
                             return false;
                         }
 
@@ -179,16 +161,13 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
                     })
                 },
             }),
-            FM.configure({
-               options: {
-                placement: 'top',
-                offset: 2,
-               }
-            }),
             FontFamily,
-            MyFontSize,
+            FontSize,
             Gapcursor,
-            InvisibleCharacters,
+            // Off by default; toggled from the toolbar's "More" menu.
+            InvisibleCharacters.configure({
+                visible: false,
+            }),
             LineHeight,
             Selection,
             TextAlign.configure({
@@ -199,6 +178,7 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
             TableOfContents.configure({
                 getIndex: getHierarchicalIndexes,
                 onUpdate: (anchors) => setAnchors(anchors),
+                scrollParent: () => document.getElementById('doc-scroll') ?? window,
             }),
             Typography,
             Placeholder.configure({placeholder: "Start writing away...",}),
@@ -209,21 +189,21 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
             CollaborationCaret.configure({
                 provider,
                 user: {
-                    name: fullname,
-                    color: `rgb(${getRandomColor()},${getRandomColor()},${getRandomColor()})`
+                    name: fullname || 'Anonymous',
+                    color: colorFor(userId),
+                    userId,
                 },
                 render(user) {
-                    const cursor = document.createElement('span')
-                    cursor.classList.add(`relative`, `border-1`);
-                    cursor.style.borderColor = user.color;
+                    const caret = document.createElement('span')
+                    caret.classList.add('collab-caret');
+                    caret.style.setProperty('--caret-color', user.color);
 
                     const label = document.createElement('span')
-                    label.classList.add(`pointer-events-none`, `bottom-full`, `absolute`, `text-nowrap`, `text-base`, `font-normal`);
-                    label.style.backgroundColor = user.color;
+                    label.classList.add('collab-caret__label');
                     label.textContent = user.name;
 
-                    cursor.insertBefore(label, null);
-                    return cursor
+                    caret.append(label);
+                    return caret
                 },
             })
         ],
@@ -232,82 +212,63 @@ export default function Tiptap({fullname, token, docName, name, messages, userId
         immediatelyRender: false,
         editorProps: {
             attributes: {
-                class: `h-full p-3 border-2 border-gray-400 rounded-sm`
+                class: `focus:outline-none`
             }
         }
     })
 
-    const [state, formAction, isPending] = useActionState(updateTitle, undefined)
-
-    useEffect(() => {
-        if(!isPending) {
-            if(state) {
-                setTitle(temp)
-            }
-            else setTemp(title)
-        }
-    }, [state, isPending])
-
     return (
-        <div className={`flex flex-col h-full min-h-max relative`}>
-            <form action={formAction} className="flex justify-center mt-1 p-0.5" onSubmit={() => console.log('Submitted')}>
-                <label className={`flex justify-center min-w-max min-h-max ${temp!==title ? `tooltip tooltip-error tooltip-right` : ``}`} data-tip={`Title is not synced to database: ${title}`}>
-                    <input disabled={isPending} required type="text" name='title' className={`input text-center text-4xl font-bold min-w-max min-h-max ${temp!==title ? `input-error` : `input-ghost` }`} value={temp} onChange={(e) => {
-                        const val = e.currentTarget.value;
-                        console.log(val)
-
-                        setTemp(val);
-                    }}/>
-                </label>
-                <input type="text" hidden name='id' value={docName}/>
-                <button className={`btn`} type="submit" disabled={isPending} hidden></button>
-            </form>
-            <MenuBar editor={editor}/>
-            <div className="flex justify-center lg:grid lg:grid-cols-[1fr_auto_1fr] h-full min-h-max p-2 relative">               
-                <ToC anchors={anchors} />
-                    
-                {
-                    editor &&
-                    <FloatingMenu editor={editor}>
-                        <div data-testid='floating-menu'>
-                            <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={`btn ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-300' : ''}`}>
-                                H1
+        <div className="flex h-[calc(100dvh-4rem)] flex-col">
+            <div className="shrink-0 border-b border-base-300 bg-base-100">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-2.5 sm:px-5">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <Link href="/dashboard" className="btn btn-ghost btn-sm btn-square tooltip tooltip-right" data-tip="Dashboard" aria-label="Back to dashboard">
+                            <ChevronLeft className="size-5"/>
+                        </Link>
+                        <DocTitle id={docName} name={name}/>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                            <button type="button" className="btn btn-ghost btn-sm xl:hidden" aria-label="Outline" onClick={() => setPanel('toc')}>
+                                <ListTree className="size-4"/>
+                                <span className="max-md:hidden">Outline</span>
                             </button>
-
-                            <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`btn ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-300' : ''}`}>
-                                H2
+                            <button type="button" className="btn btn-ghost btn-sm relative lg:hidden" aria-label={unread ? `Chat, ${unread} unread` : 'Chat'} onClick={() => { setPanel('chat'); setUnread(0); }}>
+                                <MessageCircle className="size-4"/>
+                                <span className="max-md:hidden">Chat</span>
+                                {unread > 0 && <span className="badge badge-accent badge-xs absolute -top-1 -right-1 tabular-nums">{unread > 9 ? '9+' : unread}</span>}
                             </button>
-
-                            <button onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={`btn ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-300' : ''}`}>
-                                H3
-                            </button>
-
-                            <button className={`btn tooltip ${editor.isActive('bulletList') ? `bg-blue-300` : ''}`} onClick={() => editor?.chain().focus().toggleBulletList().run()} data-tip='Bullet List'><ListBulletIcon width={20} height={20}/></button>
-
-                            <button className={`btn tooltip ${editor.isActive('orderedList') ? `bg-blue-300` : ''}`} onClick={() => editor?.chain().focus().toggleOrderedList().run()} data-tip='Ordered List'><NumberedListIcon width={20} height={20}/></button>
-
-                            <button onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className={`btn tooltip ${editor.isActive('table') ? 'bg-blue-300' : ''}`} data-tip='Table'>
-                                <TableCellsIcon width={25} height={20} />
-                            </button>
-
-                            <label className={`btn tooltip`} data-tip='Image'>
-                                <PhotoIcon width={20} height={20} />
-                                <input type="file" hidden accept="image/*" onChange={(e) => {
-                                    const img = e.target.files ? e.target.files[0] : null;
-
-                                    if(img) {
-                                        const path = URL.createObjectURL(img);
-                                        console.log(path)
-                                        editor?.chain().focus().setImage({src: path}).run();
-                                    }
-                                }}/>
-                            </label>
                         </div>
-                    </FloatingMenu>
-                }
-                <EditorContent editor={editor} className={`prose border-none m-2 bg-base-300 text-base-content lg:min-w-2xl xl:min-w-4xl justify-self-center grow shrink-0 ` }/>
-                <Messaging token={token} docName={docName} messages={messages} userId={userId}/>
+                        <Presence provider={provider} selfId={userId}/>
+                        <ConnectionStatus provider={provider}/>
+                    </div>
+                </div>
+                <MenuBar editor={editor}/>
             </div>
-        </div>       
+
+            <div className="flex min-h-0 flex-1">
+                {panel &&
+                    <div className={`fixed inset-0 z-40 bg-neutral/40 ${panel === 'toc' ? 'xl:hidden' : 'lg:hidden'}`} aria-hidden="true" onClick={() => setPanel(null)}/>
+                }
+
+                <aside ref={tocRef} tabIndex={-1} aria-label="Outline" className={`w-60 outline-none shrink-0 overflow-y-auto border-r border-base-300 bg-base-100 max-xl:fixed max-xl:inset-y-0 max-xl:left-0 max-xl:z-50 max-xl:w-72 max-xl:shadow-2xl max-xl:transition-[translate,visibility] max-xl:duration-200 ${panel === 'toc' ? '' : 'max-xl:invisible max-xl:-translate-x-full'}`}>
+                    <ToC anchors={anchors} onNavigate={() => setPanel(null)} onClose={() => setPanel(null)}/>
+                </aside>
+
+                <main id="doc-scroll" className="min-w-0 flex-1 overflow-y-auto bg-base-200 px-3 py-6 sm:px-6 sm:py-10">
+                    <article className="relative mx-auto max-w-204 rounded-box border border-base-300 bg-base-100 px-6 py-10 shadow-sm sm:px-14 sm:py-14">
+                        {editor && <InsertMenu editor={editor}/>}
+                        <EditorContent editor={editor} className="doc prose max-w-none"/>
+                    </article>
+                </main>
+
+                <aside ref={chatRef} tabIndex={-1} aria-label="Chat" className={`flex w-80 outline-none shrink-0 border-l border-base-300 bg-base-100 2xl:w-88 max-lg:fixed max-lg:inset-y-0 max-lg:right-0 max-lg:z-50 max-lg:w-[min(22rem,100vw)] max-lg:shadow-2xl max-lg:transition-[translate,visibility] max-lg:duration-200 ${panel === 'chat' ? '' : 'max-lg:invisible max-lg:translate-x-full'}`}>
+                    <Messaging token={token} docName={docName} messages={messages} userId={userId} onClose={() => setPanel(null)} onIncoming={() => {
+                        // The chat is always on screen from the lg breakpoint up.
+                        if(panelRef.current !== 'chat' && !window.matchMedia('(min-width: 64rem)').matches) setUnread(n => n + 1);
+                    }}/>
+                </aside>
+            </div>
+        </div>
     )
 }
