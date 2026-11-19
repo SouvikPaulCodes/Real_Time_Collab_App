@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.36.5",
+    "@clerk/nextjs": "^7.10.5",
     "@floating-ui/dom": "^1.7.4",
     "@heroicons/react": "^2.2.0",
     "@hocuspocus/provider": "^3.4.3",
