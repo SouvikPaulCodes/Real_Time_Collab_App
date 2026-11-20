@@ -1,11 +1,10 @@
 import { Database } from "@hocuspocus/extension-database"
-import {Server} from "@hocuspocus/server"
+import {Hocuspocus} from "@hocuspocus/server"
 import jwt from 'jsonwebtoken'
 import { AuthPayload } from "../lib/definitions.js";
 import { prisma } from "./prisma.js";
 
-export const server = new Server({
-    port: 9876,
+export const hocuspocus = new Hocuspocus({
     timeout: 30000,
     debounce: 5000,
     maxDebounce: 30000,

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: wework-backend
+    runtime: node
+    plan: free
+    rootDir: websocket
+    buildCommand: pnpm install --frozen-lockfile && pnpm build && pnpm migrate
+    startCommand: node dist/index.js
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NEXT_URL
+        value: https://we-work-three.vercel.app

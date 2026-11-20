@@ -5,6 +5,8 @@ import { prisma } from "./prisma.js";
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>({
     connectTimeout: 30000,
+    // Hocuspocus shares the HTTP server, so leave its upgrade requests alone
+    destroyUpgrade: false,
     cors: {
         origin: process.env.NEXT_URL,
         credentials: true
@@ -37,6 +39,7 @@ io.use(async (socket, next) => {
     }
     catch(e: any) {
         console.log('Unauthorized for message')
+        next(new Error('Unauthorized'));
     }
 })
 
