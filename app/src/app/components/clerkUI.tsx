@@ -9,10 +9,10 @@ export default function ClerkUI() {
     return (
         <div className="flex items-center gap-1 sm:gap-2">
             <Show when="signed-out">
-                <SignInButton mode="modal">
+                <SignInButton>
                     <button className="btn btn-ghost btn-sm">Sign in</button>
                 </SignInButton>
-                <SignUpButton mode="modal">
+                <SignUpButton>
                     <button className="btn btn-primary btn-sm">Get started</button>
                 </SignUpButton>
             </Show>

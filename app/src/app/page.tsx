@@ -28,7 +28,7 @@ function PrimaryCta({signedIn, inverted = false}: {signedIn: boolean, inverted?:
     }
 
     return (
-        <SignUpButton mode="modal">
+        <SignUpButton>
             <button className={className}>
                 Start writing
                 <ArrowRight className="size-4"/>
@@ -61,7 +61,7 @@ export default async function Home() {
                         <div className="mt-8 flex flex-wrap items-center gap-3">
                             <PrimaryCta signedIn={isAuthenticated}/>
                             {!isAuthenticated &&
-                                <SignInButton mode="modal">
+                                <SignInButton>
                                     <button className="btn btn-ghost btn-lg">I have an account</button>
                                 </SignInButton>
                             }
