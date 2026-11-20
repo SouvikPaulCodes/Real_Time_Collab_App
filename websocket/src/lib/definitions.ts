@@ -14,7 +14,7 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  message: ({content, senderId, workspaceId}: {content: string, senderId: string, workspaceId: string}) => void
+  message: ({content}: {content: string}) => void
 }
 
 export interface InterServerEvents {
@@ -22,6 +22,6 @@ export interface InterServerEvents {
 }
 
 export interface SocketData {
-  name: string;
-  age: number;
+  userId: string;
+  docName: string;
 }

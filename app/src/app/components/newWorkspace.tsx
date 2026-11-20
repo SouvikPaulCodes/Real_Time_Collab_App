@@ -15,7 +15,7 @@ export default function NewWorkspace({variant = 'button'}: {variant?: 'button' |
                     <span className="grid size-12 place-items-center rounded-full bg-base-200 transition-colors group-hover:bg-accent/10">
                         {isPending ? <span className="loading loading-spinner loading-sm"/> : <Plus className="size-5"/>}
                     </span>
-                    <span className="text-sm font-medium">{isPending ? 'Creating…' : 'New document'}</span>
+                    <span className="text-sm font-medium">{isPending ? 'Creating…' : state ? 'Couldn’t create — try again' : 'New document'}</span>
                 </button>
             </form>
         )
@@ -25,7 +25,7 @@ export default function NewWorkspace({variant = 'button'}: {variant?: 'button' |
         <form action={formAction}>
             <button type="submit" className="btn btn-primary" disabled={isPending}>
                 {isPending ? <span className="loading loading-spinner loading-sm"/> : <Plus className="size-4"/>}
-                New document
+                {state ? 'Couldn’t create — try again' : 'New document'}
             </button>
         </form>
     )

@@ -64,5 +64,5 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  message: ({content, senderId, workspaceId}: {content: string, senderId: string, workspaceId: string}) => void
+  message: ({content}: {content: string}) => void
 }

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import {prisma} from '../utils/prisma.js';
+import { findAccessibleWorkspace } from '../utils/access.js';
 
 export default async function getMessages(req: Request, res: Response) {
     console.log('Client is trying to fetch')
@@ -13,6 +14,10 @@ export default async function getMessages(req: Request, res: Response) {
         id = req.user?.id;
 
         if(!id) throw new Error('No Workspace ID');
+
+        const workspace = await findAccessibleWorkspace(id, req.user);
+
+        if(!workspace) return res.status(404).json({e: 'Workspace not found'});
         
         const data = await prisma.message.findMany({
             where: {

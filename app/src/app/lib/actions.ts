@@ -32,7 +32,7 @@ export async function getProjects({orgId, userId}: {orgId: string | undefined, u
             }
         })
 
-        if(payload.status === 500) throw new Error()
+        if(!payload.ok) throw new Error()
 
         const data: Project[] = await payload.json();
 
@@ -46,11 +46,35 @@ export async function getProjects({orgId, userId}: {orgId: string | undefined, u
 }
 
 export async function createWorkspace(prevState: any) {
-    const uuid = crypto.randomUUID();
+    const {userId, orgId} = await auth() as {
+        userId: string,
+        orgId: string | undefined
+    }
+
+    const token = await createToken({orgId, userId});
+
+    let id: string;
+
+    try {
+        const res = await fetch(`${process.env.EXPRESS_URL}/api/workspaces`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+
+        if(!res.ok) throw new Error(`Status ${res.status}`);
+
+        ({id} = await res.json() as {id: string});
+    }
+    catch (e) {
+        console.error('Failed to create workspace', e);
+        return 'Failed to create workspace';
+    }
 
     revalidatePath('/dashboard');
 
-    redirect(`/workspace/${uuid}`)
+    redirect(`/workspace/${id}`)
 }
 
 export async function creatorProjects(projects: Project[] | undefined) {
@@ -71,22 +95,16 @@ export async function creatorProjects(projects: Project[] | undefined) {
 }
 
 export async function checkAuth(id: string, userId: string, orgId: string | undefined) {
-    try {
-        const data = await getProjects({orgId, userId});
+    const data = await getProjects({orgId, userId});
 
-        if(data === '500 - Failed to fetch projects') throw new Error();
+    if(data === '500 - Failed to fetch projects') return '500 - Failed to fetch project';
 
-        const filtered = data?.filter(proj => proj.id === id);
+    const project = data?.find(proj => proj.id === id);
 
-        if(filtered?.length === 0) redirect('/dashboard');
+    // redirect() works by throwing, so it has to stay outside any try/catch
+    if(!project) redirect('/dashboard');
 
-        return filtered && filtered[0];
-    }
-    catch {
-        const error = '500 - Failed to fetch project';
-
-        return error
-    }
+    return project;
 }
 
 export async function updateTitle(prevState: boolean | undefined, formData: FormData) {
@@ -110,7 +128,7 @@ export async function updateTitle(prevState: boolean | undefined, formData: Form
             body: JSON.stringify({id, title}),
         })
 
-        if(res.status === 500) throw new Error('Couldnt change title');
+        if(!res.ok) throw new Error('Couldnt change title');
 
         return true;
     }
@@ -129,6 +147,8 @@ export async function getMessages(id: string, userId: string, orgId: string | un
                 Authorization: `Bearer ${token}`
             }
         })
+
+        if(!payload.ok) throw new Error(`Status ${payload.status}`);
 
         const messages: Message[] = await payload.json();
 

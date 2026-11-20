@@ -3,6 +3,7 @@ import {Hocuspocus} from "@hocuspocus/server"
 import jwt from 'jsonwebtoken'
 import { AuthPayload } from "../lib/definitions.js";
 import { prisma } from "./prisma.js";
+import { findAccessibleWorkspace } from "./access.js";
 
 export const hocuspocus = new Hocuspocus({
     timeout: 30000,
@@ -14,13 +15,10 @@ export const hocuspocus = new Hocuspocus({
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
 
-            const id = data.documentName;
+            // Workspaces are created up front, so a missing one is never a new document
+            const doc = await findAccessibleWorkspace(data.documentName, decoded);
 
-            const doc = await prisma.workspace.findUnique({
-                where: {id}
-            })
-
-            if(doc && (doc?.userID!==decoded.userId && doc?.orgID!==decoded.orgId)) throw new Error('GTFO')
+            if(!doc) throw new Error('GTFO')
 
             console.log('Authorized')
 
@@ -47,32 +45,21 @@ export const hocuspocus = new Hocuspocus({
                     }
                 })
 
-                if(content) return content?.content;
+                // A freshly created workspace has no Yjs state yet, and applying an empty update throws
+                if(content && content.content.length > 0) return content.content;
                 else return null;
             },
             async store(data) {
-                const {userId, orgId} = data.context as {
-                    userId: string,
-                    orgId: string | null
-                }
-
                 const id = data.documentName;
 
                 const binary = Buffer.from(data.state)
 
-                await prisma.workspace.upsert({
+                await prisma.workspace.update({
                     where: {
                         id: id
                     },
-                    update: {
+                    data: {
                         content: binary
-                    },
-                    create: {
-                        id: id,
-                        name: 'Untitled',
-                        content: binary,
-                        userID: userId,
-                        orgID: orgId
                     }
                 })
             },

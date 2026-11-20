@@ -1,5 +1,6 @@
 import { Request, response, Response } from "express";
 import { prisma } from "../utils/prisma.js";
+import { findAccessibleWorkspace } from "../utils/access.js";
 
 export async function patchTitle(req: Request, res: Response) {
     console.log('Client is changing title');
@@ -10,6 +11,10 @@ export async function patchTitle(req: Request, res: Response) {
     }
 
     try {
+        const workspace = await findAccessibleWorkspace(id, req.user);
+
+        if(!workspace) return res.sendStatus(404);
+
         await prisma.workspace.update({
             where: {
                 id,

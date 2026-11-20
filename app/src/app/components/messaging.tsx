@@ -167,11 +167,8 @@ export default function Messaging({token, docName, messages, userId, onClose, on
         const content = msgInp.trim();
         if(!content) return;
 
-        socketRef.current?.emit('message', {
-            content,
-            senderId: userId,
-            workspaceId: docName,
-        })
+        // The server attributes the message from the verified token
+        socketRef.current?.emit('message', {content})
 
         setMsgInp('');
     }
